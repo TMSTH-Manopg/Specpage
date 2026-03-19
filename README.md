@@ -1,2 +1,2 @@
-# Smiley
-Smiley Quote
+# Spec Sheet 
+Spec Model 
