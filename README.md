@@ -1,5 +1,5 @@
 
-# PublishCampaign API —  Technical Spec (REST / OpenAPI)
+# PublishCampaign API1 —  Technical Spec 
 
 > เอกสารนี้ครอบคลุมเฉพาะ **API PublishCampaign**  พร้อม **Field Dictionary แบบละเอียด**, **API Flow Diagram** 
 
@@ -7,6 +7,9 @@
 
 ## 1) Overview
 API สำหรับรับข้อมูลแคมเปญและองค์ประกอบเบี้ย เพื่อนำไปบันทึก/อัปเดตในระบบ Premium และส่งผลลัพธ์มาตรฐานกลับไปยังผู้เรียก
+
+<img width="1127" height="660" alt="image" src="https://github.com/user-attachments/assets/b56c8b23-b6b4-4cba-9293-0e0d6996ad5a" />
+
 
 ### API Flow Diagram
 ```mermaid
@@ -30,11 +33,11 @@ sequenceDiagram
 
 ## 2) Endpoint
 - **Method**: `POST`
-- **URL**: `/api/publish-campaign`
+- **URL**:  `/api/publish-campaign`   `Premium API` 
 - **Auth**: `Bearer <JWT>` (แนะนำ) หรือระบบ Auth อื่นตามมาตรฐานองค์กร
 - **Content-Type**: `application/json`
 
-### 2.1 Request Example (จากผู้ใช้)
+### 2.1 Request Example 
 ```json
 {
   "CompanyCode": "TMSTH",
@@ -146,11 +149,13 @@ sequenceDiagram
 ```json
 {
   "success": true,
-  "campaignCode": "C68/00007",
-  "premiumBatchId": "PRM-20260320-0001",
-  "recordsAccepted": 1,
-  "recordsRejected": 0,
-  "warnings": [],
+  "status": "PUBLISHED",
+  "message": "Accepted without validation",
+  "data": [
+    { /* data1 */ },
+    { /* data2 */ }
+  ],
+  "count": 2,
   "timestamp": "2026-03-20T11:03:48+07:00",
   "correlationId": "6f3a9f7e-aaaa-bbbb-cccc-000000000001"
 }
@@ -160,27 +165,25 @@ sequenceDiagram
 ```json
 {
   "success": false,
-  "errorCode": "E4001",
-  "errorMessage": "Validation failed",
-  "details": [
-    {
-      "field": "vehuse",
-      "issue": "required",
-      "value": ""
-    },
-    {
-      "field": "MinSI",
-      "issue": "must be <= MaxSI",
-      "value": {
-        "MinSI": 500000,
-        "MaxSI": 400000
-      }
-    }
+  "status": "E4001",
+  "message": "Validation failed",
+  "status": [
+      { ..data1.. },
+      { ..data2.. }
   ],
-  "recordsAccepted": 0,
-  "recordsRejected": 1,
+  "count": 1,
   "timestamp": "2026-03-20T11:03:48+07:00",
   "correlationId": "6f3a9f7e-aaaa-bbbb-cccc-000000000002"
+}
+```
+### FAILED (System error)
+```json
+{
+  "success": false,
+  "status": "FAILED",
+  "message": "Unexpected error",
+  "timestamp": "2026-03-20T11:03:48+07:00",
+  "correlationId": "6f3a9f7e-aaaa-bbbb-cccc-000000000004"
 }
 ```
 ---
