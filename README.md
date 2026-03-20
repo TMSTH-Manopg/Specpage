@@ -1,5 +1,5 @@
 
-# PublishCampaign API — Full Technical Spec (REST / OpenAPI)
+# PublishCampaign API —  Technical Spec (REST / OpenAPI)
 
 > เอกสารนี้ครอบคลุมเฉพาะ **API PublishCampaign**  พร้อม **Field Dictionary แบบละเอียด**, **API Flow Diagram** 
 
@@ -186,6 +186,8 @@ sequenceDiagram
 ---
 
 ## 3) Field Dictionary (รายละเอียดทุกฟิลด์)
+ข้อมูลคอลั่มจากไฟล์ Excel
+
 | Field | Type | Required | Example | Description | Constraints |
 |---|---|:--:|---|---|---|
 | CompanyCode | string | Y | TMSTH | รหัสบริษัท/ผู้รับประกัน | - |
