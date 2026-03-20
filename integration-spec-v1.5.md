@@ -33,7 +33,7 @@ API1 (HttpPost /api/campaign/publish)
 
 ## 3) สัญญา API (Contracts)
 
-### 3.1 Inbound — API1 `/api/campaign/publish`
+### 3.1 Inbound — API1 `/api/campaign/publish-campaign`
 - **Method:** `POST`
 - **Headers:** `Content-Type: application/json`, `Authorization: Bearer <token>`, *(แนะนำ)* `Idempotency-Key: <uuid>`
 - **Body (อย่างย่อ):**
