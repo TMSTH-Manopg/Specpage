@@ -36,7 +36,7 @@ sequenceDiagram
 
 ## 2) Endpoint
 - **Method**: `POST`
-- **URL**:  `/api/publish-campaign`   `Premium API` 
+- **URL**:   `Premium API` 
 - **Auth**: `Bearer <JWT>` (แนะนำ) หรือระบบ Auth อื่นตามมาตรฐานองค์กร
 - **Content-Type**: `application/json`
 
