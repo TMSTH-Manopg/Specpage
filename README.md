@@ -7,11 +7,8 @@
 
 ## 1) Overview
 API สำหรับรับข้อมูลแคมเปญและองค์ประกอบเบี้ย เพื่อนำไปบันทึก/อัปเดตในระบบ Premium และส่งผลลัพธ์มาตรฐานกลับไปยังผู้เรียก
-
-<img width="1178" height="301" alt="image" src="https://github.com/user-attachments/assets/50efb5c9-984c-4fe6-a5f5-4bedb9f210c4" />
-
-<img width="884" height="738" alt="image" src="https://github.com/user-attachments/assets/cbee79c6-c050-4ecb-a3a2-0719b7f52a2b" />
-
+### API Flow Diagram
+<img width="1178" height="318" alt="image" src="https://github.com/user-attachments/assets/b95a3bbb-0ecb-4d10-999e-7e1360cfe9e2" />
 
 
 ### API Flow Diagram
@@ -312,5 +309,3 @@ sequenceDiagram
 
 
 เวอร์ชันเอกสาร: 1.2 — วันที่ 09 Apr 2026
-
-
