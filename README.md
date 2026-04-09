@@ -1,7 +1,7 @@
 
 # PublishCampaign API1 —  Technical Spec 
 
-> เอกสารนี้ครอบคลุมเฉพาะ **API PublishCampaign**  พร้อม **Field Dictionary แบบละเอียด**, **API Flow Diagram** 
+> เอกสารนี้ครอบคลุมเฉพาะ **API1 PublishCampaign to Premium**  พร้อม **Field Dictionary แบบละเอียด**, **API Flow Diagram** 
 
 ---
 
@@ -36,114 +36,118 @@ sequenceDiagram
 
 ## 2) Endpoint
 - **Method**: `POST`
-- **URL**:   `Premium API` 
-- **Auth**: `Bearer <JWT>` (แนะนำ) หรือระบบ Auth อื่นตามมาตรฐานองค์กร
-- **Content-Type**: `application/json`
+- **URL**:   `http://tmwswbip17.tmith.net:8080/soap/wsdl?targetURI=urn:WSA-Safety:Smileyquote` 
+- **Content-Type**: `SOAP`
 
 ### 2.1 Request Example 
 ```json
 {
-  "CompanyCode": "TMSTH",
-  "CampaignCode": "C68/00007",
-  "polmst": "658-00000001",
-  "pack": "T",
-  "SClass": "210",
-  "covcod": "1",
-  "Vehgrp": "",
-  "vehuse": "1",
-  "GarageCd": "",
-  "makdes": "NISSAN",
-  "moddes": "URVAN",
-  "cstFlag": "S",
-  "MinCST": "0",
-  "MaxCST": "12",
-  "MinYear": "7",
-  "MaxYear": "7",
-  "MinSI": "400000",
-  "MaxSI": "400000",
-  "DriverName": "No",
-  "DrivNo": "0",
-  "DrivAge1": "0",
-  "DrivAge2": "0",
-  "uom6_u": "",
-  "cctv": "No",
-  "uom1_v": "500000",
-  "uom2_v": "10000000",
-  "uom5_v": "1000000",
-  "Seats41": "12",
-  "mv411": "50000",
-  "mv412": "50000",
-  "mv413": "0",
-  "mv414": "0",
-  "mv42": "50000",
-  "mv43": "200000",
-  "Dedod": "0",
-  "AdDod": "0",
-  "DedPD": "0",
-  "fleet_per": "0.00",
-  "ncbyrs": "0.00",
-  "ncb_per": "0.00",
-  "Dspc_per": "0.00",
-  "loadclm_per": "20.00",
-  "dstfper": "0.00",
-  "baseprm1": "15162.00",
-  "mainPrem": "23725.00",
-  "vehicleUsePrem": "0.00",
-  "enginePrem": "-1819.00",
-  "driverPrem": "667.00",
-  "vehicleAgePrem": "700.00",
-  "accessoryPrem": "0.00",
-  "siPrem": "8826.00",
-  "vehicleGroupPrem": "0.00",
-  "tpbiPersonPrem": "0.00",
-  "tpbiAccPrem": "0.00",
-  "tppdPersonPrem": "187.00",
-  "driver411Prem": "25.00",
-  "passenger412Prem": "275.00",
-  "driver413Prem": "0.00",
-  "passenger414Prem": "0.00",
-  "medicalExp42Prem": "3.00",
-  "bailbond43Prem": "20.00",
-  "deductODPrem": "0.00",
-  "deductADPrem": "0.00",
-  "deductPDPrem": "0.00",
-  "fleet_amt": "0.00",
-  "ncb_amt": "0.00",
-  "Dspc_amt": "0.00",
-  "loadclm_amt": "4810.00",
-  "dstfprm": "0.00",
-  "SI22": "0",
-  "baseprm3": "0.00",
-  "prem3new": "0.00",
-  "vehicleUse3Prem": "0.00",
-  "engine3Prem": "0.00",
-  "si3Prem": "0.00",
-  "prm_tnew": "28856.00",
-  "prem_net_pd": "28856.00",
-  "adjustAll": "-1.00",
-  "prm_stpnew": "116.00",
-  "prm_vatnew": "2028.04",
-  "prm_gapnew": "31000.04",
-  "shortRate": "No",
-  "day": "365",
-  "NetInputGap": "0.00",
-  "GrossInputGap": "0.00",
-  "BehaviorLV": "0",
-  "BehaviorPercent": "105",
-  "WallChargeSI": "",
-  "RateWallCharge": "",
-  "NetPremiumWallCharge": "",
-  "GrossPremiumWallCharge": "",
-  "BatteryYear": "",
-  "BatteryPrice": "",
-  "BatterySI": "",
-  "RateBattery": "",
-  "NetPremiumBattery": "",
-  "GrossPremiumBattery": "0",
-  "MinEVDrivNo": "0",
-  "MaxEVDrivNo": "",
-  "DealerGarageRate": "0.00",
-  "DealerGarageAmount": ""
+  "CampaignDetail": [
+    {
+      "CampaignKeyId": 270,
+      "CompanyCode": "TMSTH",
+      "CampaignCode": "C67/00013",
+      "Polmst": "270-00000001",
+      "Pack": "T",
+      "Sclass": "210",
+      "Covcod": "1",
+      "Vehgrp": "",
+      "Vehuse": null,
+      "GarageCd": "G",
+      "Makdes": "HYUNDAI",
+      "Moddes": "STARIA",
+      "CSTFlag": "S",
+      "MinYear": 1,
+      "MaxYear": 1,
+      "MinCst": 0,
+      "MaxCst": 12,
+      "MinSi": 1350000,
+      "MaxSi": 1350000,
+      "DriverName": "No",
+      "DrivNo": "0",
+      "DrivAge1": "0",
+      "DrivAge2": "0",
+      "Uom6U": "",
+      "Cctv": "No",
+      "Uom1V": 500000,
+      "Uom2V": 10000000,
+      "Uom5V": 2500000,
+      "Seats41": 12,
+      "Mv411": 100000,
+      "Mv412": 100000,
+      "Mv413": 0,
+      "Mv414": 0,
+      "Mv42": 100000,
+      "Mv43": 300000,
+      "Dedod": 0,
+      "AdDod": 0,
+      "DedPd": 0,
+      "FleetPer": "0.00",
+      "Ncbyrs": "1.00",
+      "NcbPer": "20.00",
+      "DspcPer": "21.00",
+      "LoadclmPer": "0.00",
+      "Dstfper": "10.00",
+      "Baseprm1": "12121.00",
+      "MainPrem": "37253.00",
+      "VehicleUsePrem": "0.00",
+      "EnginePrem": "-1455.00",
+      "DriverPrem": "533.00",
+      "VehicleAgePrem": "0.00",
+      "AccessoryPrem": "0.00",
+      "SiPrem": "25648.00",
+      "VehicleGroupPrem": "0.00",
+      "TpbiPersonPrem": "0.00",
+      "TpbiAccPrem": "0.00",
+      "TppdPersonPrem": "405.00",
+      "Driver411Prem": "50.00",
+      "Passenger412Prem": "550.00",
+      "Driver413Prem": "0.00",
+      "Passenger414Prem": "0.00",
+      "MedicalExp42Prem": "3.00",
+      "Bailbond43Prem": "30.00",
+      "DeductODPrem": "0.00",
+      "DeductADPrem": "0.00",
+      "DeductPDPrem": "0.00",
+      "FleetAmt": "0.00",
+      "NcbAmt": "7604.00",
+      "DspcAmt": "6387.00",
+      "LoadclmAmt": "0.00",
+      "Dstfprm": "2403.00",
+      "Si22": 0,
+      "Baseprm3": "0.00",
+      "Prem3new": "0.00",
+      "VehicleUse3Prem": "0.00",
+      "Engine3Prem": "0.00",
+      "Si3Prem": "0.00",
+      "PrmTnew": "21626.00",
+      "PremNetPd": "21626.00",
+      "AdjustAll": "0.00",
+      "PrmGapnew": "87.00",
+      "PrmStpnew": "1519.91",
+      "PrmVatnew": "23232.91",
+      "ShortRate": "No",
+      "Day": 365,
+      "NetInputGap": "0.00",
+      "GrossInputGap": "0.00",
+      "BehaviorLV": "0",
+      "BehaviorPercent": "105",
+      "WallChargeSI": "",
+      "RateWallCharge": "",
+      "NetPremiumWallCharge": "",
+      "GrossPremiumWallCharge": "",
+      "BatteryYear": "",
+      "BatteryPrice": "",
+      "BatterySI": "",
+      "RateBattery": "",
+      "NetPremiumBattery": "",
+      "GrossPremiumBattery": "",
+      "MinEVDrivNo": "0",
+      "MaxEVDrivNo": "0",
+      "DealerGarageRate": "0.01",
+      "DealerGarageAmount": "135.00"
+    }
+  ]
 }
 ```
 
@@ -158,9 +162,7 @@ sequenceDiagram
     { /* data1 */ },
     { /* data2 */ }
   ],
-  "count": 2,
-  "timestamp": "2026-03-20T11:03:48+07:00",
-  "correlationId": "6f3a9f7e-aaaa-bbbb-cccc-000000000001"
+  "timestamp": "2026-03-20T11:03:48+07:00"
 }
 ```
 
@@ -174,9 +176,7 @@ sequenceDiagram
       { ..data1.. },
       { ..data2.. }
   ],
-  "count": 1,
-  "timestamp": "2026-03-20T11:03:48+07:00",
-  "correlationId": "6f3a9f7e-aaaa-bbbb-cccc-000000000002"
+  "timestamp": "2026-03-20T11:03:48+07:00"
 }
 ```
 ### FAILED (System error)
@@ -185,8 +185,7 @@ sequenceDiagram
   "success": false,
   "status": "FAILED",
   "message": "Unexpected error",
-  "timestamp": "2026-03-20T11:03:48+07:00",
-  "correlationId": "6f3a9f7e-aaaa-bbbb-cccc-000000000004"
+  "timestamp": "2026-03-20T11:03:48+07:00"
 }
 ```
 ---
@@ -312,6 +311,6 @@ sequenceDiagram
 ---
 
 
-เวอร์ชันเอกสาร: 1.1 — วันที่ 20 Mar 2026
+เวอร์ชันเอกสาร: 1.2 — วันที่ 09 Apr 2026
 
 
