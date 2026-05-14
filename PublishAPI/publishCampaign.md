@@ -478,14 +478,14 @@ API Response นี้คือผลลัพธ์ที่ระบบ Client
 ---
 ## 3) Publish Campaign → QMOD API  
 ## 🔹 Flow Name
-**SmileyQuote Publish Campaign → ส่งข้อมูล Campaign ไป SafeSmart API**
+**SmileyQuote Publish Campaign → ส่งข้อมูล Campaign ไป QMOD API**
 
 ### 🧾 Description
 ส่ง Campaign จาก SmileyQuote ไป QMOD 
 
 ### ✅ Endpoint
 - **Method**: `POST`
-- **URL UAT**:   `http://tmwswbip17.tmith.net:8080/soap/wsdl?targetURI=urn:WSA-Safety:Smileyquote` 
+- **URL UAT**:   ` ` 
 - **URL PROD**:     
 - **Content-Type**: `SOAP`
 
