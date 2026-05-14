@@ -4,10 +4,11 @@
 เอกสารนี้เป็นการออกแบบ **API Specification (เชิงแนวคิด)** จากภาพ Architecture  
 เพื่ออธิบาย flow การทำงานระหว่างระบบ:
 
+- SmileyQuote Publish Campaign Service
 - Premium API (Progress)
 - SafeSmart API
 - QMOD API
-
+- Webhook Callback
 
 ---
 
@@ -20,11 +21,9 @@
 ---
 # 🚀 API Endpoints
 ---
-
 ## 1) Publish Campaign → Premium
 ### 🧾 Description
 ส่ง Campaign จาก SmileyQuote ไป Premium (Progress Service)
-
 ### ✅ Endpoint
 - **Method**: `POST`
 - **URL UAT**:   `http://tmwswbip17.tmith.net:8080/soap/wsdl?targetURI=urn:WSA-Safety:Smileyquote` 
@@ -311,7 +310,7 @@ API Response นี้คือผลลัพธ์ที่ระบบ Client
   "FileRef": "CampaignID_458_20260513164955.txt"
 }
 ```
-### ❌ Failed
+###❌ Failed
 ```json
 {
   "publishCampaignID": "458",
@@ -322,4 +321,176 @@ API Response นี้คือผลลัพธ์ที่ระบบ Client
   "FileRef": ""
 }
 ```
+--- 
 
+
+## 2) Publish Campaign → SafeSmart API
+
+## 🔹 Flow Name
+**SmileyQuote Publish Campaign → ส่งข้อมูล Campaign ไป SafeSmart API**
+
+### 🧾 Description
+เมื่อระบบ **SmileyQuote** ทำการ Publish Campaign  
+ระบบจะส่งข้อมูล Campaign (รายละเอียด rate ทั้งหมด) ไปยัง  
+**SafeSmart API** เพื่อ:
+- ✅ บันทึกข้อมูล Campaign  
+- ✅ อัปเดตข้อมูลในระบบ SafeSmart  
+- ✅ ใช้เป็นข้อมูลสำหรับคำนวณหรือแสดงผลในระบบปลายทาง  
+
+### ✅ Endpoint
+- **Method**: `POST`
+- **URL UAT**:   `http://10.35.99.161/API_Motor/SetMotorCampiagnDetail` 
+- **URL PROD**:     
+- **Content-Type**: `SOAP`
+---
+
+## 📥 Request Description
+- ใช้ส่งข้อมูล Campaign Detail
+- มี structure เป็น array (`campaigndetail`)
+- รองรับหลายรายการ (Multiple Rate Rows)
+
+---
+### 📥 Request (Conceptual)
+```json
+{
+  "campaigndetail": [
+    {
+      "si31": "135.00",
+      "AttachTextTha": "",
+      "VehicleWeight": 0.0,
+      "CCTVFlag": "No",
+      "ComPersi": "",
+      "AccessoryFlag": "",
+      "ClaimPrem": 0.00,
+      "FleetPrem": 0.00,
+      "PATempDriv": "0",
+      "MaxSumIns": 1350000.0,
+      "MedicalExp": "2.00",
+      "chargvat": "",
+      "PromotionCode": "",
+      "chargstp": "",
+      "levcod": "",
+      "rate31": "0.01",
+      "VehicleSize": 0,
+      "BailBond": "10.00",
+      "CampaignCode": "TEST",
+      "VehicleSeat": 7,
+      "PALifeDriv": "50000",
+      "ComAccsi": "",
+      "AccessorySumIns": 0.0,
+      "VehicleBody": "",
+      "PlanNumber": "",
+      "DriverAge1Max": 0,
+      "TotDiscPrem": 0.00,
+      "battflg": "",
+      "charflg": "",
+      "PackCode": "T",
+      "OtherText": "",
+      "PlanName": "",
+      "battnetprm": "",
+      "VehicleMaxCST": 2000.0,
+      "PATempPass": "0",
+      "CoverTypeCode": "1",
+      "NetPrem": 38891.00,
+      "watts": "",
+      "MinSumIns": 1350000.0,
+      "SubBusClass": "110",
+      "NcbPrem": 7842.00,
+      "DriverAge2Max": 0,
+      "battsi": "",
+      "PALifePass": "50000",
+      "DriverAge2Min": 0,
+      "Stamp": 126.00,
+      "battnum": "",
+      "VehicleDoorNumber": "",
+      "gapprm31": "126.00",
+      "chargnetprm": "",
+      "DiscPrem": 0.00,
+      "pdprm31": "135.00",
+      "VehicleUseTha": "ใช้ส่วนบุคคล ไม่ใช้รับจ้างหรือให้เช่า",
+      "chargtot": "",
+      "VehicleGarage": "G",
+      "charggrossprm": "",
+      "TPpdacc": "1000000",
+      "TPbiacc": "10000000",
+      "DriverNumber": 0,
+      "SumInsFt": "",
+      "ExpiryDate": "20261231",
+      "battprice": "",
+      "Seat411": "",
+      "DedPrem": 0.00,
+      "Tax": 2204.67,
+      "SumInsOd": "",
+      "AddPrem": 0.0,
+      "battvat": "",
+      "chargnum": "",
+      "battyr": "",
+      "battstp": "",
+      "PromotionName": "",
+      "AttachTextEng": "",
+      "Seat414": "",
+      "Seat413": "",
+      "Seat412": "",
+      "DriverType": "",
+      "GrossPrem": 0.0,
+      "battrate": "",
+      "chargrate": "",
+      "VehicleGroup": "3",
+      "VehicleModel": "CAMRY",
+      "VehicleMinCST": 0.0,
+      "Premium3": 427.00,
+      "Premium2": 0.00,
+      "Premium1": 38891.00,
+      "batttot": "",
+      "maksi": "",
+      "PolicyMaster": "458-00000001",
+      "CampaignName": "Example Campaign",
+      "DriverAge1Min": 0,
+      "VehicleUseCode": "1",
+      "DeductPd": "0.00",
+      "battgrossprm": "",
+      "PlanCode": "",
+      "TPbips": "1000000",
+      "chargsi": "",
+      "VehicleBrand": "TOYOTA",
+      "DayCover": "365",
+      "DeductOd": "0.00",
+      "levper": "",
+      "VehicleAge": 0,
+      "fgtariff": "",
+      "VehicleUseEng": "For personal use not for rent or let on hire",
+      "EffectiveDate": "20240101",
+      "battper": ""
+    }
+  ]
+}
+```
+
+### 📥 Response Example
+```json
+{
+  "Status": "SUCCESS",
+  "Message": "บันทึกข้อมูลสำเร็จ(14/14)",
+  "ErrorList": []
+}
+```
+
+---
+## 3) Publish Campaign → QMOD API  
+## 🔹 Flow Name
+**SmileyQuote Publish Campaign → ส่งข้อมูล Campaign ไป SafeSmart API**
+
+### 🧾 Description
+ส่ง Campaign จาก SmileyQuote ไป QMOD 
+
+### ✅ Endpoint
+- **Method**: `POST`
+- **URL UAT**:   `http://tmwswbip17.tmith.net:8080/soap/wsdl?targetURI=urn:WSA-Safety:Smileyquote` 
+- **URL PROD**:     
+- **Content-Type**: `SOAP`
+
+
+### 📥 Request (Conceptual)
+```json
+
+```
