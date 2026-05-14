@@ -1,0 +1,1188 @@
+openapi: 3.0.3
+info:
+  title: Policy Parameter Setup Service - Campaigns API
+  version: 2.0.0
+  description: |
+    REST API for managing campaign rate configurations for the TMSTH motor insurance system.
+
+    ## Endpoints in this spec
+    - `PUT /campaigns/{campaignId}` — Create or replace a campaign (metadata + full rate row set).
+    - `PUT /campaigns/{campaignId}/company-codes` — Replace the full set of company codes bound to a campaign.
+  license:
+    name: Commercial
+
+servers:
+  - url: https://apis-dev.tokiomarinesafety.co.th/policy/parameter-setup/v1/api
+    description: Development
+
+security:
+  - BearerAuth: []
+    ApimSubscriptionKey: []
+
+tags:
+  - name: Campaigns
+    description: Campaign rate management — upsert (PUT) and company-code binding (PUT).
+
+paths:
+  /campaigns/{campaignId}:
+    parameters:
+      - $ref: '#/components/parameters/CampaignIdParam'
+    put:
+      operationId: upsertCampaign
+      tags:
+        - Campaigns
+      summary: Create or replace a campaign
+      description: |
+        Create a new campaign with the given `campaignId`, or replace an existing one (idempotent).
+
+        **Semantics:**
+        - Send the full campaign metadata plus the entire array of rate rows in the body.
+        - Any existing rate rows not present in the request body are **deleted** (full replace).
+        - `campaignId` is supplied by the client (UUID v4 recommended).
+
+        **Constraints:**
+        - Max rate rows per request: 10,000.
+        - Metadata (`campaignName`, `effectiveSchedule`) and `items` array are required.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CampaignUpsertRequest'
+      responses:
+        '200':
+          description: Campaign updated (existed before).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignResponse'
+        '201':
+          description: Campaign created (new).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignResponse'
+        '400':
+          $ref: '#/components/responses/E400_BadRequest'
+        '401':
+          $ref: '#/components/responses/E401_Unauthorized'
+        '500':
+          $ref: '#/components/responses/E500_InternalServerError'
+
+  /campaigns/{campaignId}/company-codes:
+    parameters:
+      - $ref: '#/components/parameters/CampaignIdParam'
+    put:
+      operationId: replaceCampaignCompanyCodes
+      tags:
+        - Campaigns
+      summary: Replace company codes bound to a campaign
+      description: |
+        Replace the full set of company codes bound to this campaign (idempotent).
+        Codes present in the body are bound; codes previously bound but absent in the body are unbound.
+
+        **Validation:**
+        - Each `companyCode` must exist in Partner Companies — otherwise `400 Bad Request` with the offending code(s).
+        - Each `companyCode` may be bound to **at most one** campaign at a time. If any code in the request is already bound to a different campaign, the request fails with `409 Conflict` and the offending code(s) + their current `campaignId` are returned. Re-binding requires unbinding from the other campaign first.
+        - Empty array clears all bindings.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CampaignCompanyCodesInput'
+      responses:
+        '200':
+          description: Company codes replaced successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignCompanyCodesResponse'
+        '400':
+          $ref: '#/components/responses/E400_BadRequest'
+        '401':
+          $ref: '#/components/responses/E401_Unauthorized'
+        '404':
+          $ref: '#/components/responses/E404_NotFound'
+        '409':
+          $ref: '#/components/responses/E409_Conflict'
+        '500':
+          $ref: '#/components/responses/E500_InternalServerError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+    ApimSubscriptionKey:
+      type: apiKey
+      in: header
+      name: Ocp-Apim-Subscription-Key
+      description: Azure API Management subscription key
+
+  parameters:
+    CampaignIdParam:
+      name: campaignId
+      in: path
+      required: true
+      description: Campaign identifier (UUID, supplied by the client when creating the campaign).
+      schema:
+        type: string
+        format: uuid
+      example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+
+  schemas:
+    EffectiveSchedule:
+      type: object
+      description: Effective date schedule for configuration.
+      properties:
+        effectiveDate:
+          type: string
+          format: date
+          description: Date when the configuration becomes effective.
+          example: "2024-01-01"
+        expiryDate:
+          type: string
+          format: date
+          nullable: true
+          description: Date when the configuration expires (null for no expiry).
+          example: "2024-12-31"
+      required:
+        - effectiveDate
+
+    PartnerCompanyRef:
+      type: object
+      description: |
+        Lightweight reference to a PartnerCompany. Used for embedding in other resources
+        (e.g., Campaign company bindings) so clients get id + display name without
+        fetching the full PartnerCompany record.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: PartnerCompany unique identifier.
+          example: "550e8400-e29b-41d4-a716-446655440001"
+        partnerCompanyCode:
+          type: string
+          maxLength: 20
+          description: Partner company code.
+          example: "570"
+        companyName:
+          type: string
+          maxLength: 75
+          description: Full name of the partner company.
+          example: Tokio Marine Insurance
+      required:
+        - id
+        - partnerCompanyCode
+        - companyName
+
+    # ──────────────────────────────────────────────────────────
+    #  Campaign Rate Schemas
+    # ──────────────────────────────────────────────────────────
+    CampaignRate:
+      type: object
+      description: |
+        A single campaign rate record.
+        Company eligibility is defined at the parent campaign level via `PUT /campaigns/{campaignId}/company-codes` — not per rate row.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for this campaign rate row (server-generated).
+          readOnly: true
+          example: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+        campaignId:
+          type: string
+          format: uuid
+          description: ID of the parent campaign that owns this rate row.
+          readOnly: true
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        # ── Section 1: Policy & Campaign ──
+        campaignCode:
+          type: string
+          maxLength: 15
+          description: Campaign code. CSV column "CampaignCode".
+          example: C68/00050-2+
+        polMst:
+          type: string
+          maxLength: 20
+          description: Policy master code (e.g., 530-00000001).
+          example: 530-00000001
+        # ── Section 2: Vehicle Classification (columns 4-12) ──
+        pack:
+          type: string
+          maxLength: 5
+          nullable: true
+          description: Package code (T = standard tariff).
+          example: T
+        sClass:
+          type: string
+          maxLength: 5
+          nullable: true
+          description: Vehicle sub-class (e.g., 320 = pickup). CSV column "SClass".
+          example: "320"
+        covCod:
+          type: string
+          maxLength: 5
+          nullable: true
+          description: Coverage code (e.g., 2.2 = OD+theft + TPBI+TPPD).
+          example: "2.2"
+        vehGrp:
+          type: string
+          maxLength: 5
+          nullable: true
+          description: Vehicle group code. Empty string treated as null. CSV column "Vehgrp".
+          example: "01"
+        vehUse:
+          type: string
+          maxLength: 5
+          nullable: true
+          description: Vehicle use code (1 = personal).
+          example: "1"
+        garageCd:
+          type: string
+          maxLength: 5
+          nullable: true
+          description: Garage code (uppercase). Empty string treated as null. CSV column "GarageCd".
+          example: TMSTH
+        makDes:
+          type: string
+          maxLength: 15
+          nullable: true
+          description: Vehicle make/brand.
+          example: FORD
+        modDes:
+          type: string
+          maxLength: 15
+          nullable: true
+          description: Vehicle model.
+          example: RANGER
+        cstFlag:
+          type: string
+          maxLength: 1
+          nullable: true
+          description: "CST type: C = engine CC, S = seats, T = weight (ton)."
+          enum: [C, S, T]
+          example: C
+        # ── Section 3: Range Conditions (columns 13-18) ──
+        minCst:
+          type: number
+          format: double
+          nullable: true
+          description: Minimum CC/seats/ton value (per cstFlag). CSV column "MinCST".
+          example: 0
+        maxCst:
+          type: number
+          format: double
+          nullable: true
+          description: Maximum CC/seats/ton value (per cstFlag). CSV column "MaxCST".
+          example: 3000
+        minYear:
+          type: integer
+          nullable: true
+          description: Minimum vehicle age (years). CSV column "MinYear".
+          example: 20
+        maxYear:
+          type: integer
+          nullable: true
+          description: Maximum vehicle age (years). CSV column "MaxYear".
+          example: 20
+        minSi:
+          type: number
+          format: double
+          nullable: true
+          description: Minimum sum insured. CSV column "MinSI".
+          example: 50000
+        maxSi:
+          type: number
+          format: double
+          nullable: true
+          description: Maximum sum insured. CSV column "MaxSI".
+          example: 50000
+        # ── Section 4: Driver Info (columns 19-22) ──
+        driverName:
+          type: string
+          nullable: true
+          description: Whether named driver is required (Yes/No). CSV column "DriverName".
+          enum: [Yes, "No"]
+          example: "No"
+        drivNo:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: Number of named drivers (max 2). CSV column "DrivNo".
+          example: 0
+        drivAge1:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: Age of driver 1. CSV column "DrivAge1".
+          example: 0
+        drivAge2:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: Age of driver 2. CSV column "DrivAge2".
+          example: 0
+        # ── Section 5: Special Features & Coverage Amounts (columns 23-34) ──
+        uom6U:
+          type: string
+          maxLength: 1
+          nullable: true
+          description: Accessory code. Empty string treated as null. CSV column "uom6_u".
+          example: A
+        cctv:
+          type: string
+          nullable: true
+          description: CCTV installed (Yes/No) — for discount calculation.
+          enum: [Yes, "No"]
+          example: "No"
+        uom1V:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: TPBI per person coverage amount. CSV column "uom1_v".
+          example: 500000
+        uom2V:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: TPBI per accident coverage amount. CSV column "uom2_v".
+          example: 10000000
+        uom5V:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: TPPD coverage amount. CSV column "uom5_v".
+          example: 1000000
+        seats41:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: Number of seats for PA coverage (code 41). CSV column "Seats41".
+          example: 3
+        mv411:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: PA driver sum insured (code 411).
+          example: 100000
+        mv412:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: PA passenger sum insured (code 412).
+          example: 100000
+        mv413:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: Temporary driver sum insured (code 413).
+          example: 0
+        mv414:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: Temporary passenger sum insured (code 414).
+          example: 0
+        mv42:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: Medical expense sum insured (code 42).
+          example: 100000
+        mv43:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: Bail bond sum insured (code 43).
+          example: 200000
+        # ── Section 6: Deductibles (columns 35-37) ──
+        dedOd:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: Own damage deductible. CSV column "Dedod".
+          example: 0
+        adDod:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: Additional deductible. CSV column "AdDod".
+          example: 0
+        dedPd:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: Property damage deductible. CSV column "DedPD".
+          example: 0
+        # ── Section 7: Discount/Loading Percentages (columns 38-43) ──
+        fleetPer:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 100
+          nullable: true
+          description: Fleet discount percentage. CSV column "fleet_per".
+          example: 0
+        ncbYrs:
+          type: integer
+          minimum: 0
+          maximum: 5
+          nullable: true
+          description: No-claim bonus years (0-5).
+          example: 0
+        ncbPer:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 100
+          nullable: true
+          description: No-claim bonus percentage. CSV column "ncb_per".
+          example: 50
+        dspcPer:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 100
+          nullable: true
+          description: Special discount percentage. CSV column "Dspc_per".
+          example: 36
+        loadclmPer:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 100
+          nullable: true
+          description: Claim loading percentage. CSV column "loadclm_per".
+          example: 0
+        dstfPer:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 100
+          nullable: true
+          description: Staff discount percentage.
+          example: 0
+        # ── Section 8: Base Premium (column 44) ──
+        basePrm1:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: Base premium type 1 (voluntary motor).
+          example: 7721
+        # ── Section 9: Premium Step Breakdown (columns 45-64) ──
+        mainPrem:
+          type: number
+          format: double
+          nullable: true
+          description: Main OD premium (after rate adjustment).
+          example: 7235
+        vehicleUsePrem:
+          type: number
+          format: double
+          nullable: true
+          description: Vehicle use premium adjustment.
+          example: 0
+        enginePrem:
+          type: number
+          format: double
+          nullable: true
+          description: Engine CST premium adjustment.
+          example: -849
+        driverPrem:
+          type: number
+          format: double
+          nullable: true
+          description: Named driver premium adjustment.
+          example: 0
+        vehicleAgePrem:
+          type: number
+          format: double
+          nullable: true
+          description: Vehicle age premium adjustment.
+          example: 0
+        accessoryPrem:
+          type: number
+          format: double
+          nullable: true
+          description: Accessory premium.
+          example: 0
+        siPrem:
+          type: number
+          format: double
+          nullable: true
+          description: Sum insured premium adjustment.
+          example: 0
+        vehicleGroupPrem:
+          type: number
+          format: double
+          nullable: true
+          description: Vehicle group premium adjustment.
+          example: 0
+        tpbiPersonPrem:
+          type: number
+          format: double
+          nullable: true
+          description: TPBI per person premium.
+          example: 363.39
+        tpbiAccPrem:
+          type: number
+          format: double
+          nullable: true
+          description: TPBI per accident premium.
+          example: 50
+        tppdPersonPrem:
+          type: number
+          format: double
+          nullable: true
+          description: TPPD premium.
+          example: 100
+        driver411Prem:
+          type: number
+          format: double
+          nullable: true
+          description: PA driver premium (code 411).
+          example: 0
+        passenger412Prem:
+          type: number
+          format: double
+          nullable: true
+          description: PA passenger premium (code 412).
+          example: 0
+        driver413Prem:
+          type: number
+          format: double
+          nullable: true
+          description: Temporary driver premium (code 413).
+          example: 1
+        passenger414Prem:
+          type: number
+          format: double
+          nullable: true
+          description: Temporary passenger premium (code 414).
+          example: 20
+        medicalExp42Prem:
+          type: number
+          format: double
+          nullable: true
+          description: Medical expense premium (code 42).
+          example: 0
+        bailBond43Prem:
+          type: number
+          format: double
+          nullable: true
+          description: Bail bond premium (code 43).
+          example: 0
+        deductOdPrem:
+          type: number
+          format: double
+          nullable: true
+          description: Deductible OD premium adjustment. CSV column "deductODPrem".
+          example: 0
+        deductAdPrem:
+          type: number
+          format: double
+          nullable: true
+          description: Additional deductible premium adjustment. CSV column "deductADPrem".
+          example: 0
+        deductPdPrem:
+          type: number
+          format: double
+          nullable: true
+          description: Deductible PD premium adjustment. CSV column "deductPDPrem".
+          example: 0
+        # ── Section 10: Discount/Loading Amounts (columns 65-69) ──
+        fleetAmt:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: Fleet discount amount. CSV column "fleet_amt".
+          example: 3703
+        ncbAmt:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: NCB discount amount. CSV column "ncb_amt".
+          example: 1333
+        dspcAmt:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: Special discount amount. CSV column "Dspc_amt".
+          example: 0
+        loadclmAmt:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: Claim loading amount. CSV column "loadclm_amt".
+          example: 0
+        dstfPrm:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: Staff discount amount.
+          example: 0
+        # ── Section 11: Type 3 (CMI) & Final Totals (columns 70-81) ──
+        si22:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: Sum insured for section 2.2 (OD). CSV column "SI22".
+          example: 50000
+        basePrm3:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: Base premium type 3 (compulsory motor / CMI).
+          example: 3400
+        prem3New:
+          type: number
+          format: double
+          nullable: true
+          description: Adjusted CMI premium.
+          example: 3400
+        vehicleUse3Prem:
+          type: number
+          format: double
+          nullable: true
+          description: Vehicle use premium adjustment for type 3.
+          example: 0
+        engine3Prem:
+          type: number
+          format: double
+          nullable: true
+          description: Engine premium adjustment for type 3.
+          example: 0
+        si3Prem:
+          type: number
+          format: double
+          nullable: true
+          description: Sum insured premium adjustment for type 3.
+          example: 0
+        prmTNew:
+          type: number
+          format: double
+          nullable: true
+          description: Net premium (after all adjustments). CSV column "prm_tnew".
+          example: 5770.39
+        premNetPd:
+          type: number
+          format: double
+          nullable: true
+          description: Net premium PD portion. CSV column "prem_net_pd".
+          example: 5770.39
+        adjustAll:
+          type: number
+          format: double
+          nullable: true
+          description: Rounding adjustment to make gross a whole number.
+          example: -0.61
+        prmStpNew:
+          type: number
+          format: double
+          nullable: true
+          description: Stamp duty (~0.4% of net, rounded up). CSV column "prm_stpnew".
+          example: 24
+        prmVatNew:
+          type: number
+          format: double
+          nullable: true
+          description: VAT (7% of net + stamp). CSV column "prm_vatnew".
+          example: 405.61
+        prmGapNew:
+          type: number
+          format: double
+          nullable: true
+          description: Gross premium (net + stamp + VAT). CSV column "prm_gapnew".
+          example: 6200
+        # ── Section 12: Short Rate & GAP (columns 82-85) ──
+        shortRate:
+          type: string
+          nullable: true
+          description: Short rate flag (Yes = pro-rata by days, No = full year).
+          enum: [Yes, "No"]
+          example: "No"
+        day:
+          type: integer
+          minimum: 1
+          maximum: 365
+          nullable: true
+          description: Policy days (365 = full year).
+          example: 365
+        netInputGap:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: GAP insurance net premium input. CSV column "NetInputGap".
+          example: 0
+        grossInputGap:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: GAP insurance gross premium input. CSV column "GrossInputGap".
+          example: 0
+        # ── Section 13: Driver Behavior (columns 86-87) — new fields ──
+        behaviorLv:
+          type: string
+          nullable: true
+          description: Driver behavior level (from telematics/IoT). Empty string treated as null. CSV column "BehaviorLV".
+          example: A
+        behaviorPercent:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 100
+          nullable: true
+          description: Driver behavior discount/loading percentage. CSV column "BehaviorPercent".
+        # ── Section 14: EV Wall Charger (columns 88-91) — new fields ──
+        wallChargeSi:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: Wall charger sum insured (EV only). CSV column "WallChargeSI".
+        rateWallCharge:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: Wall charger rate (EV only). CSV column "RateWallCharge".
+        netPremiumWallCharge:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: Wall charger net premium (EV only). CSV column "NetPremiumWallCharge".
+        grossPremiumWallCharge:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: Wall charger gross premium (EV only). CSV column "GrossPremiumWallCharge".
+        # ── Section 15: EV Battery (columns 92-97) — new fields ──
+        batteryYear:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: Battery age/year for EV coverage. CSV column "BatteryYear".
+        batteryPrice:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: Battery replacement price. CSV column "BatteryPrice".
+        batterySi:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: Battery sum insured (EV only). CSV column "BatterySI".
+        rateBattery:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: Battery rate (EV only). CSV column "RateBattery".
+        netPremiumBattery:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: Battery net premium (EV only). CSV column "NetPremiumBattery".
+        grossPremiumBattery:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: Battery gross premium (EV only). CSV column "GrossPremiumBattery".
+        # ── Section 16: EV Driver & Dealer Garage (columns 98-101) — new fields ──
+        minEvDrivNo:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: Minimum EV driver count. CSV column "MinEVDrivNo".
+        maxEvDrivNo:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: Maximum EV driver count. CSV column "MaxEVDrivNo".
+        dealerGarageRate:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: Dealer garage rate. CSV column "DealerGarageRate".
+        dealerGarageAmount:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: Dealer garage amount. CSV column "DealerGarageAmount".
+      required:
+        - campaignCode
+        - polMst
+
+    # ──────────────────────────────────────────────────────────
+    #  Campaign (batch-level) Schemas
+    # ──────────────────────────────────────────────────────────
+    Campaign:
+      type: object
+      description: |
+        A campaign — metadata header that owns a collection of rate rows.
+        The `campaignId` is supplied by the client (UUID).
+      properties:
+        campaignId:
+          type: string
+          format: uuid
+          description: Unique campaign identifier (client-supplied, UUID v4 recommended).
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        companies:
+          type: array
+          description: |
+            Partner companies bound to this campaign. Managed via `PUT /campaigns/{campaignId}/company-codes`.
+            Empty array means no company has been bound yet.
+          readOnly: true
+          items:
+            $ref: '#/components/schemas/PartnerCompanyRef'
+        campaignName:
+          type: string
+          maxLength: 200
+          description: Human-readable campaign name.
+          example: Full Main Agent Motor Type 2
+        description:
+          type: string
+          maxLength: 2000
+          nullable: true
+          description: General campaign description.
+          example: แคมเปญสำหรับตัวแทนหลัก ประเภท 2
+        effectiveSchedule:
+          $ref: '#/components/schemas/EffectiveSchedule'
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of items (rate rows) currently belonging to this campaign.
+          readOnly: true
+          example: 1213
+      required:
+        - campaignId
+        - campaignName
+        - effectiveSchedule
+
+    CampaignResponse:
+      type: object
+      description: Success response wrapper for a single campaign.
+      properties:
+        code:
+          type: string
+          example: S200
+        message:
+          type: string
+          example: Campaign retrieved successfully.
+        data:
+          $ref: '#/components/schemas/Campaign'
+      required:
+        - code
+        - message
+        - data
+
+    CampaignRateInput:
+      type: object
+      description: |
+        Campaign item (rate row) payload used inside `CampaignUpsertRequest.items`. Has the same 100 data columns as `CampaignRate` but excludes server-managed fields (`id`, `campaignId`) — these are ignored if sent.
+      allOf:
+        - $ref: '#/components/schemas/CampaignRate'
+
+    CampaignUpsertRequest:
+      type: object
+      description: |
+        Body for `PUT /campaigns/{campaignId}`. Replaces all items (rate rows) for this campaign (idempotent — rows not in the body are deleted).
+        Company bindings are managed separately via `PUT /campaigns/{campaignId}/company-codes`.
+      properties:
+        # ── Metadata ──
+        campaignName:
+          type: string
+          maxLength: 200
+          description: Human-readable campaign name.
+          example: Full Main Agent Motor Type 2
+        description:
+          type: string
+          maxLength: 2000
+          nullable: true
+          description: General campaign description.
+          example: แคมเปญสำหรับตัวแทนหลัก ประเภท 2
+        effectiveSchedule:
+          $ref: '#/components/schemas/EffectiveSchedule'
+        # ── Items (rate rows) ──
+        items:
+          type: array
+          minItems: 1
+          maxItems: 10000
+          description: |
+            Full set of items (rate rows) for this campaign. Replaces any existing rows (idempotent).
+          items:
+            $ref: '#/components/schemas/CampaignRateInput'
+      required:
+        - campaignName
+        - effectiveSchedule
+        - items
+
+    CampaignCompanyCodesInput:
+      type: object
+      description: Body for `PUT /campaigns/{campaignId}/company-codes`. Full replace of bindings.
+      properties:
+        companyCodes:
+          type: array
+          description: |
+            Full set of company codes to bind to the campaign. Empty array clears all bindings.
+            Each value must exist in Partner Companies, and each code can only be bound to one campaign at a time.
+          items:
+            type: string
+            maxLength: 5
+          example:
+            - "570"
+            - TMSTH
+      required:
+        - companyCodes
+
+    CampaignCompanyCodesResponse:
+      type: object
+      description: Success response wrapper for campaign company-code bindings.
+      properties:
+        code:
+          type: string
+          example: S200
+        message:
+          type: string
+          example: Company codes retrieved successfully.
+        data:
+          type: object
+          properties:
+            campaignId:
+              type: string
+              format: uuid
+            companies:
+              type: array
+              description: Partner companies currently bound to the campaign.
+              items:
+                $ref: '#/components/schemas/PartnerCompanyRef'
+          required:
+            - campaignId
+            - companies
+      required:
+        - code
+        - message
+        - data
+
+    # ──────────────────────────────────────────────────────────
+    #  Error Response Schemas
+    # ──────────────────────────────────────────────────────────
+    ErrorResponse:
+      type: object
+      description: |
+        Standard error response structure.
+        Code format: EXXX where XXX matches HTTP status code (e.g., E400, E401, E404, E500).
+      properties:
+        code:
+          type: string
+          description: Error code matching HTTP status (E400, E401, E403, E404, E409, E500).
+          example: E400
+        message:
+          type: string
+          description: Human-readable error message.
+          example: Invalid input data
+        details:
+          type: array
+          description: Additional error details for specific fields.
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                description: Field name that caused the error.
+                example: ErrorField
+              message:
+                type: string
+                description: Specific error message for the field.
+                example: ErrorMessage
+            required:
+              - field
+              - message
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp when the error occurred.
+          example: "2025-11-26T05:04:21.220Z"
+        traceId:
+          type: string
+          format: uuid
+          description: Unique trace ID for error tracking and debugging.
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      required:
+        - code
+        - message
+        - timestamp
+        - traceId
+
+    UnauthorizedResponse:
+      type: object
+      description: |
+        Standard error response structure.
+        Code format: EXXX where XXX matches HTTP status code (e.g., E400, E401, E404, E500).
+      properties:
+        code:
+          type: string
+          description: Error code matching HTTP status (E400, E401, E403, E404, E409, E500).
+          example: E401
+        message:
+          type: string
+          description: Human-readable error message.
+          example: Unauthorized access - invalid or missing authentication credentials
+        details:
+          type: array
+          description: Additional error details for specific fields.
+          example: []
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp when the error occurred.
+          example: "2025-11-26T05:04:21.220Z"
+        traceId:
+          type: string
+          format: uuid
+          description: Unique trace ID for error tracking and debugging.
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      required:
+        - code
+        - message
+        - timestamp
+        - traceId
+
+    NotFoundResponse:
+      type: object
+      description: |
+        Standard error response structure.
+        Code format: EXXX where XXX matches HTTP status code (e.g., E400, E401, E404, E500).
+      properties:
+        code:
+          type: string
+          description: Error code matching HTTP status (E400, E401, E403, E404, E409, E500).
+          example: E404
+        message:
+          type: string
+          description: Human-readable error message.
+          example: Data not found
+        details:
+          type: array
+          description: Additional error details for specific fields.
+          example: []
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp when the error occurred.
+          example: "2025-11-26T05:04:21.220Z"
+        traceId:
+          type: string
+          format: uuid
+          description: Unique trace ID for error tracking and debugging.
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      required:
+        - code
+        - message
+        - timestamp
+        - traceId
+
+    ConflictResponse:
+      type: object
+      description: |
+        Standard error response structure.
+        Code format: EXXX where XXX matches HTTP status code (e.g., E400, E401, E404, E500).
+      properties:
+        code:
+          type: string
+          description: Error code matching HTTP status (E400, E401, E403, E404, E409, E500).
+          example: E409
+        message:
+          type: string
+          description: Human-readable error message.
+          example: Data is confliccted with existing records
+        details:
+          type: array
+          description: Additional error details for specific fields.
+          example: []
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp when the error occurred.
+          example: "2025-11-26T05:04:21.220Z"
+        traceId:
+          type: string
+          format: uuid
+          description: Unique trace ID for error tracking and debugging.
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      required:
+        - code
+        - message
+        - timestamp
+        - traceId
+
+  responses:
+    E400_BadRequest:
+      description: Bad request - Invalid input
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    E401_Unauthorized:
+      description: Unauthorized - Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UnauthorizedResponse'
+
+    E404_NotFound:
+      description: Not found - Resource does not exist
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/NotFoundResponse'
+
+    E409_Conflict:
+      description: Conflict - Resource already exists or version mismatch
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ConflictResponse'
+
+    E500_InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
