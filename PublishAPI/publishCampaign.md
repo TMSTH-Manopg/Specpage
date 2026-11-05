@@ -1,22 +1,17 @@
 # 📘 API Specification  
 
 ## 🔹 Overview
-เอกสารนี้เป็นการออกแบบ **API Specification (เชิงแนวคิด)** จากภาพ Architecture  
-เพื่ออธิบาย flow การทำงานระหว่างระบบ:
-
-- SmileyQuote Publish Campaign Service
-- Premium API (Progress)
-- SafeSmart API
-- QMOD API
-- Webhook Callback
+เอกสารนี้เป็นการออกแบบ **API Specification ** จากภาพ 
+เพื่ออธิบาย flow การทำงานระหว่างระบบ  SmileyQuote Publish Campaign Service
+- Premium API 
+- QMOD API 
 
 ---
 
 # 🧭 System Flow 
 
-1. SmileyQuote → ส่งข้อมูล Campaign ไป Premium API  
-2. SmileyQuote → ส่งข้อมูล Campaign ไป SafeSmart API  
-3. SmileyQuote → ส่งข้อมูล Campaign ไป QMOD API  
+1. SmileyQuote → ส่งข้อมูล Campaign ไป Premium API   
+2. SmileyQuote → ส่งข้อมูล Campaign ไป QMOD API  
 
 ---
 # 🚀 API Endpoints
@@ -324,14 +319,14 @@ API Response นี้คือผลลัพธ์ที่ระบบ Client
 --- 
 
 
-# 2) Publish Campaign → SafeSmart API
+# 2) PREMIUM API → SafeSmart API
 
 ## 🔹 Flow Name
-**SmileyQuote Publish Campaign → ส่งข้อมูล Campaign ไป SafeSmart API**
+** Premium Database Campaign → ส่งข้อมูล Campaign ไป SafeSmart API**
 
 ### 🧾 Description
-เมื่อระบบ **SmileyQuote** ทำการ Publish Campaign  
-ระบบจะส่งข้อมูล Campaign (รายละเอียด rate ทั้งหมด) ไปยัง  
+เมื่อระบบ **SmileyQuote** ทำการ Publish Campaign ไปยัง Premium 
+ระบบ Premium จะทำการ Process ส่งข้อมูล Campaign (รายละเอียด rate ทั้งหมด) ไปยัง  
 **SafeSmart API** เพื่อ:
 - ✅ บันทึกข้อมูล Campaign  
 - ✅ อัปเดตข้อมูลในระบบ SafeSmart  
@@ -340,8 +335,7 @@ API Response นี้คือผลลัพธ์ที่ระบบ Client
 ### ✅ Endpoint
 - **Method**: `POST`
 - **URL UAT**:   `http://10.35.99.161/API_Motor/SetMotorCampiagnDetail` 
-
-- **Content-Type**: `SOAP`
+ 
 ---
 
 ## 📥 Request Description
@@ -755,7 +749,7 @@ REST API สำหรับจัดการการตั้งค่าอ�
 ### 3.2) Publish Campaign Company QMOD 
 
 #### 🧾 Description
-REST API สำหรับแทนที่ชุดข้อมูลรหัสบริษัททั้งหมดที่ผูกไว้กับแคมเปญ (Idempotent) โดยรหัสบริษัทที่ส่งมาใน Request Body จะถูกผูกเข้ากับแคมเปญ (Bound) ส่วนรหัสบริษัทเดิมที่เคยผูกไว้แต่ไม่ได้ระบุมาในคำขอครั้งนี้จะถูกยกเลิกการผูกออกไป (Unbound)
+API สำหรับแทนที่ชุดข้อมูลรหัสบริษัททั้งหมดที่ผูกไว้กับแคมเปญ (Idempotent) โดยรหัสบริษัทที่ส่งมาใน Request Body จะถูกผูกเข้ากับแคมเปญ (Bound) ส่วนรหัสบริษัทเดิมที่เคยผูกไว้แต่ไม่ได้ระบุมาในคำขอครั้งนี้จะถูกยกเลิกการผูกออกไป (Unbound)
 
 ---
 
