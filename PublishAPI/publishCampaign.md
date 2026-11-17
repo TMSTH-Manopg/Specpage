@@ -243,16 +243,6 @@ Field Dictionary นี้อธิบายโครงสร้าง JSON ส
 | ExpiredPeriod | string | YYYYMMDD |
 
 ---
-### 📊 Summary
-- ✅ โครงสร้างแบบ **Header + Detail**
-- ✅ รองรับ **Multi-rate per campaign**
-- ✅ ครอบคลุม:
-  - Vehicle
-  - Driver
-  - Coverage
-  - Premium calculation แบบละเอียด
-  - EV support
----
 
 ### 📘 API Response Specification – Publish Campaign (Premium)
 
@@ -472,253 +462,25 @@ API Response นี้คือผลลัพธ์ที่ระบบ Client
 ---
 # 3) Publish Campaign → QMOD API  
 
-## 🔹 Flow Name
-**SmileyQuote Publish Campaign → ส่งข้อมูล Campaign ไป QMOD API**
+## Overview
+Policy Parameter Setup Service - QMOD Campaigns API
+REST API สำหรับจัดการข้อมูล Campaign Rate Configuration ของระบบประกันภัยรถยนต์ TMSTH
+
+รองรับ:
+
+- Create / Update Campaign
+- Import Campaign Rate แบบ Asynchronous
+- ตรวจสอบสถานะ Import
+- จัดการ Company Codes ที่ผูกกับ Campaign
 
 ---
 
-### 3.1) Publish Campaign Detail QMOD API 
+## Authentication
 
-#### 🧾 Description
-REST API สำหรับจัดการการตั้งค่าอัตราแคมเปญ (Campaign rate configurations) สำหรับระบบประกันภัยรถยนต์ TMSTH (TMSTH motor insurance system) โดยบริการนี้จะรองรับการจัดการข้อมูลแคมเปญในส่วนของ Commercial การอัปเดตข้อมูลแบบ Upsert (PUT) รวมถึงการผูกข้อมูลรหัสบริษัท (Company-code binding)
+ทุก Endpoint ต้องผ่านการ Authentication
 
-**Base URL (Development):**
-`https://apis-dev.tokiomarinesafety.co.th/policy/parameter-setup/v1/api`
+Response กรณีไม่ได้รับอนุญาต:
 
----
-
-#### ✅ Endpoint
-
-##### 1. Create or replace a campaign
-*   **Method:** `PUT`
-*   **Path:** `/campaigns/{campaignId}`
-*   **Description:** สร้างแคมเปญใหม่ด้วย `campaignId` ที่กำหนด หรือแทนที่แคมเปญเดิมที่มีอยู่แล้ว (Idempotent)
-
-##### 2. Replace company codes bound to a campaign
-*   **Method:** `PUT`
-*   **Path:** `/campaigns/{campaignId}/company-codes`
-*   **Description:** แทนที่ชุดข้อมูลรหัสบริษัททั้งหมดที่ผูกไว้กับแคมเปญ
-
----
-
-#### 📥 Request Description
-
-คำอธิบายสำหรับการใช้งาน Endpoint: **`PUT /campaigns/{campaignId}`**
-
-##### Semantics (หลักการทำงาน)
-*   **ส่งข้อมูลทั้งหมด:** ต้องส่งข้อมูล Metadata ของแคมเปญแบบครบถ้วน พร้อมกับอาร์เรย์ของข้อมูลแถวอัตราเบี้ยประกัน (Rate rows) ทั้งหมดในส่วนของ Body
-*   **ลบข้อมูลเก่า:** แถวอัตราเบี้ยประกันเดิมที่ไม่ได้ระบุมาใน Request body จะถูกลบออกทั้งหมด (เป็นการแทนที่แบบสมบูรณ์ หรือ Full replace)
-*   **การกำหนด ID:** ลูกค้า (Client) จะต้องเป็นผู้ระบุค่า `campaignId` ส่งมาเอง โดยแนะนำให้ใช้รูปแบบ UUID v4
-
-##### Constraints (ข้อจำกัดและเงื่อนไข)
-*   **จำกัดจำนวนแถว:** กำหนดให้มีแถวอัตราเบี้ยประกัน (Rate rows) ได้สูงสุดไม่เกิน **10,000 แถว** ต่อหนึ่ง Request
-*   **ฟิลด์ที่จำเป็น (Required):** ข้อมูลในส่วนของ `Metadata` (ประกอบด้วย `campaignName`, `effectiveSchedule`) และอาร์เรย์ของ `items` จำเป็นต้องระบุส่งมาด้วยเสมอ
-
-##### 🔑 Parameters
-
-###### Path Parameters
-*   **`campaignId`** `string($uuid)` (*required*)
-    *   **Description:** ตัวระบุแคมเปญเฉพาะ (Campaign identifier) ในรูปแบบ UUIDv4 ที่ถูกสร้างขึ้นและส่งมาจากฝั่ง Client 
-    *   **Example:** `a1b2c3d4-e5f6-7890-abcd-ef1234567890`
-
----
-
-##### 📥 Request Body (application/json)
-
-ข้อมูล JSON Payload ตัวอย่างสำหรับอัปเดตและตั้งค่าแคมเปญ:
-
-```json
-{
-  "campaignName": "Full Main Agent Motor Type 2",
-  "description": "แคมเปญสำหรับตัวแทนหลัก ประเภท 2",
-  "effectiveSchedule": {
-    "effectiveDate": "2024-01-01",
-    "expiryDate": "2024-12-31"
-  },
-  "items": [
-    {
-      "campaignCode": "C68/00050-2+",
-      "polMst": "530-00000001",
-      "pack": "T",
-      "sClass": "320",
-      "covCod": "2.2",
-      "vehGrp": "01",
-      "vehUse": "1",
-      "garageCd": "TMSTH",
-      "makDes": "FORD",
-      "modDes": "RANGER",
-      "cstFlag": "C",
-      "minCst": 0,
-      "maxCst": 3000,
-      "minYear": 20,
-      "maxYear": 20,
-      "minSi": 50000,
-      "maxSi": 50000,
-      "driverName": "No",
-      "drivNo": 0,
-      "drivAge1": 0,
-      "drivAge2": 0,
-      "uom6U": "A",
-      "cctv": "No",
-      "uom1V": 500000,
-      "uom2V": 10000000,
-      "uom5V": 1000000,
-      "seats41": 3,
-      "mv411": 100000,
-      "mv412": 100000,
-      "mv413": 0,
-      "mv414": 0,
-      "mv42": 100000,
-      "mv43": 200000,
-      "dedOd": 0,
-      "adDod": 0,
-      "dedPd": 0,
-      "fleetPer": 0,
-      "ncbYrs": 0,
-      "ncbPer": 50,
-      "dspcPer": 36,
-      "loadclmPer": 0,
-      "dstfPer": 0,
-      "basePrm1": 7721,
-      "mainPrem": 7235,
-      "vehicleUsePrem": 0,
-      "enginePrem": -849,
-      "driverPrem": 0,
-      "vehicleAgePrem": 0,
-      "accessoryPrem": 0,
-      "siPrem": 0,
-      "vehicleGroupPrem": 0,
-      "tpbiPersonPrem": 363.39,
-      "tpbiAccPrem": 50,
-      "tppdPersonPrem": 100,
-      "driver411Prem": 0,
-      "passenger412Prem": 0,
-      "driver413Prem": 1,
-      "passenger414Prem": 20,
-      "medicalExp42Prem": 0,
-      "bailBond43Prem": 0,
-      "deductOdPrem": 0,
-      "deductAdPrem": 0,
-      "deductPdPrem": 0,
-      "fleetAmt": 3703,
-      "ncbAmt": 1333,
-      "dspcAmt": 0,
-      "loadclmAmt": 0,
-      "dstfPrm": 0,
-      "si22": 50000,
-      "basePrm3": 3400,
-      "prem3New": 3400,
-      "vehicleUse3Prem": 0,
-      "engine3Prem": 0,
-      "si3Prem": 0,
-      "prmTNew": 5770.39,
-      "premNetPd": 5770.39,
-      "adjustAll": -0.61,
-      "prmStpNew": 24,
-      "prmVatNew": 405.61,
-      "prmGapNew": 6200,
-      "shortRate": "No",
-      "day": 365,
-      "netInputGap": 0,
-      "grossInputGap": 0,
-      "behaviorLv": "A",
-      "behaviorPercent": 100,
-      "wallChargeSi": 0,
-      "rateWallCharge": 0,
-      "netPremiumWallCharge": 0,
-      "grossPremiumWallCharge": 0,
-      "batteryYear": 0,
-      "batteryPrice": 0,
-      "batterySi": 0,
-      "rateBattery": 0,
-      "netPremiumBattery": 0,
-      "grossPremiumBattery": 0,
-      "minEvDrivNo": 0,
-      "maxEvDrivNo": 0,
-      "dealerGarageRate": 0,
-      "dealerGarageAmount": 0
-    }
-  ]
-}
-```
-##### 📤 Response Description
-
-ระบบจะส่งผลลัพธ์กลับมาในรูปแบบ `application/json` โดยมีรายละเอียดรหัสสถานะ (HTTP Status Code) ดังนี้:
-
-###### 1. HTTP 200: Campaign updated (existed before)
-*   **Description:** อัปเดตข้อมูลแคมเปญสำเร็จ (กรณีมีข้อมูลแคมเปญนี้อยู่ในระบบเดิมอยู่แล้ว)
-*   **Response Body Example:**
-```json
-{
-  "code": "S200",
-  "message": "Campaign retrieved successfully.",
-  "data": {
-    "campaignId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-    "companies": [
-      {
-        "id": "550e8400-e29b-41d4-a716-446655440001",
-        "partnerCompanyCode": "570",
-        "companyName": "Tokio Marine Insurance"
-      }
-    ],
-    "campaignName": "Full Main Agent Motor Type 2",
-    "description": "แคมเปญสำหรับตัวแทนหลัก ประเภท 2",
-    "effectiveSchedule": {
-      "effectiveDate": "2024-01-01",
-      "expiryDate": "2024-12-31"
-    },
-    "total": 1213
-  }
-}
-```
-
-###### 2. HTTP 201: Campaign created (new)
-*   **Description:** สร้างแคมเปญใหม่ในระบบสำเร็จ
-*   **Response Body Example:**
-```json
-{
-  "code": "S200",
-  "message": "Campaign retrieved successfully.",
-  "data": {
-    "campaignId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-    "companies": [
-      {
-        "id": "550e8400-e29b-41d4-a716-446655440001",
-        "partnerCompanyCode": "570",
-        "companyName": "Tokio Marine Insurance"
-      }
-    ],
-    "campaignName": "Full Main Agent Motor Type 2",
-    "description": "แคมเปญสำหรับตัวแทนหลัก ประเภท 2",
-    "effectiveSchedule": {
-      "effectiveDate": "2024-01-01",
-      "expiryDate": "2024-12-31"
-    },
-    "total": 1213
-  }
-}
-```
-###### 3. HTTP 400: Bad request - Invalid input
-*   **Description:** คำขอไม่ถูกต้องเนื่องจากข้อมูลนำเข้า (Input data) ไม่ผ่านการตรวจสอบเงื่อนไข
-*   **Response Body Example:**
-```json
-{
-  "code": "E400",
-  "message": "Invalid input data",
-  "details": [
-    {
-      "field": "ErrorField",
-      "message": "ErrorMessage"
-    }
-  ],
-  "timestamp": "2025-11-26T05:04:21.220Z",
-  "traceId": "550e8400-e29b-41d4-a716-446655440000"
-}
-```
-
-###### 4. HTTP 401: Unauthorized - Authentication required
-*   **Description:** การเข้าถึงถูกปฏิเสธเนื่องจากไม่มีข้อมูลการยืนยันตัวตน หรือข้อมูลยืนยันตัวตนไม่ถูกต้อง
-*   **Response Body Example:**
 ```json
 {
   "code": "E401",
@@ -729,73 +491,235 @@ REST API สำหรับจัดการการตั้งค่าอ�
 }
 ```
 
-###### 5. HTTP 500: Internal server error
-*   **Description:** เกิดข้อผิดพลาดภายในระบบของเซิร์ฟเวอร์
-*   **Response Body Example:**
+---
+
+## Endpoints
+
+### 1. Create or Replace Campaign
+
+#### PUT `/campaigns/{campaignId}`
+
+สร้าง Campaign ใหม่ หรือแทนที่ Campaign เดิมทั้งหมด โดยเป็นการทำงานแบบ Idempotent
+
+#### Behavior
+
+- เป็น Async Process
+- Response กลับด้วย HTTP `202 Accepted`
+- คืนค่า `jobId` สำหรับติดตามสถานะ
+- ผู้เรียกต้องส่ง Rate Rows ทั้งชุด
+- ระบบประมวลผลข้อมูลตามกฎดังนี้
+
+| กรณี | ผลลัพธ์ |
+|---|---|
+| `campaignCode + polMst` ตรงกับข้อมูลเดิม | Update |
+| ไม่พบข้อมูลเดิม | Insert |
+| มีข้อมูลเดิมแต่ไม่ถูกส่งมาใน Request | Delete |
+| Request มี `campaignCode + polMst` ซ้ำ | ใช้ Record แรก |
+
+#### Transaction Rule
+
+Campaign, Rate Rows และ Company Codes จะถูกบันทึกภายใต้ Transaction เดียวกัน
+
+หาก Import ล้มเหลว:
+
+- Rollback การเปลี่ยนแปลงทั้งหมด
+- ไม่มีข้อมูลบางส่วนถูกบันทึก
+
+#### Path Parameter
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `campaignId` | UUID | Yes | Campaign identifier ที่ Client เป็นผู้กำหนด แนะนำ UUID v4 |
+
+ตัวอย่าง:
+
+```text
+a1b2c3d4-e5f6-7890-abcd-ef1234567890
+```
+
+#### Request Body
+
 ```json
 {
-  "code": "E400",
-  "message": "Invalid input data",
-  "details": [
-    {
-      "field": "ErrorField",
-      "message": "ErrorMessage"
-    }
+  "campaignName": "Full Main Agent Motor Type 2",
+  "description": "แคมเปญสำหรับตัวแทนหลัก ประเภท 2",
+  "effectiveSchedule": {
+    "effectiveDate": "2024-01-01",
+    "expiryDate": "2024-12-31"
+  },
+  "companyCodes": [
+    "570",
+    "TMSTH"
   ],
+  "items": [
+    {
+      "campaignCode": "C68/00050-2+",
+      "polMst": "530-00000001"
+    }
+  ]
+}
+```
+
+#### Company Codes Behavior
+
+- หากส่ง `companyCodes` ระบบจะแทนที่ Company Codes เดิมทั้งหมดภายใน Import เดียวกัน
+- หากไม่ส่ง หรือส่งเป็น `null` ระบบจะคง Company Codes เดิมไว้
+- หากส่งเป็น Array ว่าง หรือมี Code ว่าง ระบบตอบ `400 Bad Request`
+
+#### Validation
+
+##### HTTP 400 Bad Request
+
+เกิดขึ้นเมื่อ:
+
+- Request Body ไม่ถูกต้อง
+- `campaignName` ไม่มีค่า
+- `effectiveSchedule` ไม่มีค่า
+- `items` ว่าง หรือไม่มีอย่างน้อย 1 Record
+- `companyCodes` ถูกส่งเป็น `[]`
+- `companyCodes` มีค่าว่าง
+
+##### HTTP 409 Conflict
+
+เกิดขึ้นเมื่อ Company Code อย่างน้อยหนึ่งรายการไม่มีใน Partner Companies
+
+- Response จะแสดง Company Code ที่ไม่พบทั้งหมด
+- ระบบจะไม่เริ่ม Import
+- ไม่มีข้อมูลถูกเปลี่ยนแปลง
+
+#### Success Response
+
+##### HTTP 202 Accepted
+
+```json
+{
+  "jobId": "3f2c9a8e-1b7d-4c55-9e0a-6d2f4b8c1a90",
+  "status": "Success",
+  "rowCount": 1213
+}
+```
+
+> `status: Success` หมายถึง Request ถูกยอมรับเข้าสู่กระบวนการ Import แล้ว ไม่ได้หมายความว่า Import เสร็จสมบูรณ์ ผู้เรียกต้องตรวจสอบผลผ่าน Status API
+
+#### Response Header
+
+| Header | Description |
+|---|---|
+| `Location` | URL ของ `GET /campaigns/{campaignId}/imports/{jobId}` สำหรับตรวจสอบสถานะ Import |
+
+---
+
+### 2. Get Import Status
+
+#### GET `/campaigns/{campaignId}/imports/{jobId}`
+
+ตรวจสอบสถานะการ Import Campaign ที่เริ่มจาก `PUT /campaigns/{campaignId}`
+
+#### Path Parameters
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `campaignId` | UUID | Yes | Campaign identifier |
+| `jobId` | UUID | Yes | Job identifier ที่ได้รับจาก Create or Replace Campaign API |
+
+#### Status Values
+
+| Status | Description |
+|---|---|
+| `Queued` | Request ถูกยอมรับและกำลังรอประมวลผล |
+| `Processing` | กำลังประมวลผล |
+| `Succeeded` | Campaign, Rate Rows และ Company Bindings ถูกบันทึกสำเร็จ |
+| `Failed` | Import ล้มเหลวและไม่มีข้อมูลถูกเปลี่ยนแปลง ให้ตรวจสอบ `error` |
+
+Infrastructure Failure จะถูก Retry อัตโนมัติ และสถานะอาจกลับไปเป็น `Processing`
+
+#### Success Response
+
+##### HTTP 200 OK
+
+```json
+{
+  "jobId": "3f2c9a8e-1b7d-4c55-9e0a-6d2f4b8c1a90",
+  "campaignId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "status": "Succeeded",
+  "rowCount": 1213,
+  "error": null,
+  "createdAt": "2026-11-07T05:04:21.220Z",
+  "updatedAt": "2026-11-07T05:04:29.410Z"
+}
+```
+
+#### Error Responses
+
+##### HTTP 401 Unauthorized
+
+Authentication ไม่ถูกต้องหรือไม่มี Credentials
+
+##### HTTP 404 Not Found
+
+เกิดขึ้นเมื่อ:
+
+- ไม่พบ `jobId`
+- `jobId` ไม่ได้อยู่ภายใต้ `campaignId` ที่ระบุ
+
+```json
+{
+  "code": "E404",
+  "message": "Data not found",
+  "details": [],
   "timestamp": "2025-11-26T05:04:21.220Z",
   "traceId": "550e8400-e29b-41d4-a716-446655440000"
 }
-``` 
-### 3.2) Publish Campaign Company QMOD 
-
-#### 🧾 Description
-API สำหรับแทนที่ชุดข้อมูลรหัสบริษัททั้งหมดที่ผูกไว้กับแคมเปญ (Idempotent) โดยรหัสบริษัทที่ส่งมาใน Request Body จะถูกผูกเข้ากับแคมเปญ (Bound) ส่วนรหัสบริษัทเดิมที่เคยผูกไว้แต่ไม่ได้ระบุมาในคำขอครั้งนี้จะถูกยกเลิกการผูกออกไป (Unbound)
+```
 
 ---
 
-#### ✅ Endpoint
-*   **Method:** `PUT`
-*   **Path:** `/campaigns/{campaignId}/company-codes`
-*   **Description:** แทนที่ชุดข้อมูลรหัสบริษัททั้งหมดที่ผูกไว้กับแคมเปญ
+### 3. Replace Campaign Company Codes
 
----
+#### PUT `/campaigns/{campaignId}/company-codes`
 
-#### 📥 Request Description
+แทนที่รายการ Company Codes ทั้งหมดที่ผูกกับ Campaign โดยเป็นการทำงานแบบ Idempotent
 
-คำอธิบายสำหรับการใช้งาน Endpoint: **`PUT /campaigns/{campaignId}/company-codes`**
+#### Rules
 
-##### Validation (หลักการตรวจสอบเงื่อนไข)
-*   **ตรวจสอบความถูกต้องของรหัสบริษัท:** แต่ละรหัส `companyCode` จะต้องมีข้อมูลอยู่จริงในระบบ Partner Companies หากไม่มีอยู่จริง ระบบจะส่งผลลัพธ์กลับมาเป็น **400 Bad Request** พร้อมระบุรหัสเจ้าปัญหา
-*   **ข้อจำกัดการผูกข้อมูล:** แต่ละรหัส `companyCode` สามารถผูกเข้ากับแคมเปญได้สูงสุด **1 แคมเปญ** ในเวลาเดียวกันเท่านั้น หากรหัสใดถูกผูกไว้กับแคมเปญอื่นอยู่แล้ว คำขอจะล้มเหลวและระบบจะส่งผลลัพธ์กลับมาเป็น **409 Conflict** พร้อมส่งรหัสที่เป็นปัญหาและ `campaignId` ปัจจุบันกลับมาด้วย (หากต้องการผูกใหม่ จะต้องทำการปลดการผูก หรือ Unbind จากแคมเปญเดิมก่อน)
-*   **การเคลียร์ข้อมูล:** การส่งอาร์เรย์ว่าง (Empty array) จะเป็นการยกเลิกการผูกข้อมูล (Clear all bindings) ของแคมเปญนี้ทั้งหมด
+- Company Code ที่อยู่ใน Request จะถูก Bind กับ Campaign
+- Company Code ที่เคย Bind แต่ไม่อยู่ใน Request จะถูก Unbind
+- Company หนึ่งรายการสามารถผูกกับ Campaign ได้หลาย Campaign
+- Duplicate Codes จะถูก Ignore โดยเปรียบเทียบแบบ Case Insensitive
+- การเปลี่ยนแปลงเป็นแบบ All-or-Nothing
 
-##### 🔑 Parameters
+#### Path Parameter
 
-###### Path Parameters
-*   **`campaignId`** `string($uuid)` (*required*)
-    *   **Description:** ตัวระบุแคมเปญเฉพาะ (Campaign identifier) ในรูปแบบ UUIDv4 ที่สร้างขึ้นและส่งมาจากฝั่ง Client
-    *   **Example:** `a1b2c3d4-e5f6-7890-abcd-ef1234567890`
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `campaignId` | UUID | Yes | Campaign identifier |
 
----
-
-##### 📥 Request Body (application/json)
-
-ข้อมูล JSON Payload ตัวอย่างสำหรับการผูกข้อมูลรหัสบริษัท:
+#### Request Body
 
 ```json
 {
   "companyCodes": [
+    "570",
     "TMSTH"
   ]
 }
 ```
-##### 📤 Response Description
 
-ระบบจะส่งผลลัพธ์กลับมาในรูปแบบ `application/json` โดยมีรายละเอียดรหัสสถานะ (HTTP Status Code) ดังนี้:
+#### Validation
 
-###### 1. HTTP 200: Company codes replaced successfully.
-*   **Description:** แทนที่ชุดข้อมูลรหัสบริษัทที่ผูกกับแคมเปญสำเร็จ
-*   **Response Body Example:**
+| HTTP Status | Condition |
+|---|---|
+| `400 Bad Request` | `companyCodes` ไม่มีอย่างน้อย 1 Code ที่ไม่เป็นค่าว่าง |
+| `401 Unauthorized` | Authentication ไม่ถูกต้องหรือไม่มี Credentials |
+| `404 Not Found` | ไม่พบ Campaign |
+| `409 Conflict` | พบ Company Code ที่ไม่มีใน Partner Companies |
+
+กรณี `409 Conflict` ระบบจะแสดง Code ที่ไม่พบทั้งหมด และจะไม่เปลี่ยน Binding ใด ๆ
+
+#### Success Response
+
+##### HTTP 200 OK
+
 ```json
 {
   "code": "S200",
@@ -813,9 +737,10 @@ API สำหรับแทนที่ชุดข้อมูลรหัส�
 }
 ```
 
-###### 2. HTTP 400: Bad request - Invalid input
-*   **Description:** คำขอไม่ถูกต้องเนื่องจากข้อมูลนำเข้าไม่ผ่านเงื่อนไข (เช่น รหัสบริษัทไม่มีอยู่จริงในระบบ)
-*   **Response Body Example:**
+---
+
+## Standard Error Model
+
 ```json
 {
   "code": "E400",
@@ -830,59 +755,41 @@ API สำหรับแทนที่ชุดข้อมูลรหัส�
   "traceId": "550e8400-e29b-41d4-a716-446655440000"
 }
 ```
-###### 3. HTTP 401: Unauthorized - Authentication required
-*   **Description:** ปฏิเสธการเข้าถึงเนื่องจากไม่มีข้อมูลการยืนยันตัวตน หรือข้อมูลไม่ถูกต้อง
-*   **Response Body Example:**
-```json
-{
-  "code": "E401",
-  "message": "Unauthorized access - invalid or missing authentication credentials",
-  "details": [],
-  "timestamp": "2025-11-26T05:04:21.220Z",
-  "traceId": "550e8400-e29b-41d4-a716-446655440000"
-}
-```
 
-###### 4. HTTP 404: Not found - Resource does not exist
-*   **Description:** ไม่พบข้อมูลแคมเปญตาม `campaignId` ที่ระบุมาในระบบ
-*   **Response Body Example:**
-```json
-{
-  "code": "E404",
-  "message": "Data not found",
-  "details": [],
-  "timestamp": "2025-11-26T05:04:21.220Z",
-  "traceId": "550e8400-e29b-41d4-a716-446655440000"
-}
-```
+### Conflict Response Example
 
-###### 5. HTTP 409: Conflict - Resource already exists or version mismatch
-*   **Description:** เกิดการขัดกันของข้อมูล (เช่น `companyCode` ที่ส่งมาถูกผูกไว้กับแคมเปญอื่นอยู่ก่อนแล้ว)
-*   **Response Body Example:**
 ```json
 {
   "code": "E409",
-  "message": "Data is confliccted with existing records",
-  "details": [],
-  "timestamp": "2025-11-26T05:04:21.220Z",
+  "message": "Company codes 9999, 8888 do not exist in the system.",
+  "details": [
+    {
+      "field": "companyCodes",
+      "message": "Company code 9999 does not exist in the system."
+    },
+    {
+      "field": "companyCodes",
+      "message": "Company code 8888 does not exist in the system."
+    }
+  ],
+  "timestamp": "2026-11-07T05:04:21.220Z",
   "traceId": "550e8400-e29b-41d4-a716-446655440000"
 }
 ```
 
-###### 6. HTTP 500: Internal server error
-*   **Description:** เกิดข้อผิดพลาดที่ไม่คาดคิดภายในระบบเซิร์ฟเวอร์
-*   **Response Body Example:**
-```json
-{
-  "code": "E400",
-  "message": "Invalid input data",
-  "details": [
-    {
-      "field": "ErrorField",
-      "message": "ErrorMessage"
-    }
-  ],
-  "timestamp": "2025-11-26T05:04:21.220Z",
-  "traceId": "550e8400-e29b-41d4-a716-446655440000"
-}
+---
+
+## Technical Constraints
+
+| Item | Value |
+|---|---|
+| Request Body Size | สูงสุด 64 MB |
+| Tested Import Size | ประมาณ 13,000 Rate Rows ต่อ Request |
+| `campaignName` | Required |
+| `effectiveSchedule` | Required |
+| `items` | ต้องมีอย่างน้อย 1 Record |
+| `campaignId` | Client-generated UUID แนะนำ UUID v4 |
+| Import Concurrency | Import ทำงานครั้งละ 1 Job |
+
 ```
+
